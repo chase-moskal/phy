@@ -1,20 +1,33 @@
 
 export enum Op {
-	push,   // Push float64 literal (8 bytes follow)
-	pop,    // Pop and discard top of stack
+	push, // (followed by an 8 byte number literal)
+	pop, // discards the top-of-stack
+	dup, // duplicates top-of-stack and pushes it
+	swap, // swaps top-two in stack
 
-	add,    // Pop a, b → Push b + a
-	sub,    // Pop a, b → Push b - a
+	// control flow
+	jump, // jump to the given bytecode address (pops: "head")
+	jump_if_zero, // (pops: "head", "number")
+	jump_if_not_zero, // (pops: "head", "number")
+	jump_if_negative, // (pops: "head", "number")
+
+	memplz, // request a 64kb memory page (pushes: "page")
+	load, // load a number from memory (pops: "page", "address"; pushes:"number")
+	store, // store a number into memory (pops: "page", "address", "number")
+	load_byte, // load a byte from memory as a number (pops: "page", "address"; pushes: "byte")
+	store_byte, // store a number into memory as a byte (pops: "page", "address", "byte")
+
+	// arithmetic
+	add,
+	sub,
 	mul,
 	div,
-	rem,    // JS-style remainder (b % a)
-	neg,    // Unary negation (Push -a)
+	rem,
+	neg,
 
-	print,  // Pop and console.log
-	dup,    // Duplicate top of stack
-	swap,   // Swap top two
-
-	halt = 0xFF,    // Stop execution
+	// meta and halting
+	print,
+	halt,
 }
 
 const maxStackSize = 1024
@@ -128,6 +141,8 @@ class NumberWriter {
 }
 
 export function assemble(assembly: string) {
+	// TODO implement "label" operations that are assembly-only
+
 	const lines = assembly.trim().split("\n").map(line => line.trim()).filter(line => line.length > 0)
 	const bytes: number[] = []
 	const temp = new NumberWriter()
