@@ -9,18 +9,22 @@ export class Memory {
 	#nextPageId = 0
 	#pages = new Map<number, MemoryPage>()
 
-	memplz() {
+	create() {
 		const id = this.#nextPageId++
 		const page = new MemoryPage(id)
 		this.#pages.set(id, page)
 		return id
 	}
 
-	memcya(id: number) {
+	delete(id: number) {
 		this.#pages.delete(id)
 	}
 
-	getPage(id: number) {
+	has(id: number) {
+		return this.#pages.has(id)
+	}
+
+	get(id: number) {
 		const page = this.#pages.get(id)
 		if (page === undefined)
 			throw new Error(`memory page not found "${id}"`)

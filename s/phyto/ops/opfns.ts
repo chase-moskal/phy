@@ -74,19 +74,25 @@ export const opfns: Record<keyof typeof Opcode, (vm: Vm) => void> = {
 	//
 
 	memplz: vm => {
-		const pageId = vm.memory.memplz()
+		const pageId = vm.memory.create()
 		vm.stack.push(pageId)
 	},
 
 	memcya: vm => {
 		const pageId = terp.uint(vm.stack.pop())
-		vm.memory.memcya(pageId)
+		vm.memory.delete(pageId)
+	},
+
+	memcheck: vm => {
+		const pageId = terp.uint(vm.stack.pop())
+		const hasPage = vm.memory.has(pageId)
+		vm.stack.push(hasPage ? 1 : 0)
 	},
 
 	memload: vm => {
 		const byteMode = vm.bytecode.getBoolean()
 		const [pageId, address, length] = vm.stack.popN(3).map(terp.uint)
-		const page = vm.memory.getPage(pageId)
+		const page = vm.memory.get(pageId)
 		if (byteMode) {
 			for (const byte of page.bytes.slice(address, address + length).reverse())
 				vm.stack.push(byte)
@@ -105,7 +111,7 @@ export const opfns: Record<keyof typeof Opcode, (vm: Vm) => void> = {
 	memstore: vm => {
 		const byteMode = vm.bytecode.getBoolean()
 		const [pageId, address, length] = vm.stack.popN(3).map(terp.uint)
-		const page = vm.memory.getPage(pageId)
+		const page = vm.memory.get(pageId)
 		const numbers = vm.stack.popN(length)
 		if (byteMode) {
 			page.bytes.set(numbers, address)

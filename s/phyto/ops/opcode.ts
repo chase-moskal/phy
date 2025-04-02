@@ -12,13 +12,14 @@ export enum Opcode {
 	// stack stuff
 	push, // [f64] {add a literal f64 to stack}
 	pushbytes, // [f64 length], ...[u8 bytes] {add bytes to stack as f64s}
-	pop, swap, dup, dup2, over,
 	select, // (cond) (a) (b) {pushes a to stack if cond is 1}
 	jump, // [bool is-conditional], [f64 position] {cond true will pop jump condition from stack}
+	pop, swap, dup, dup2, over,
 
 	// memory stuff
 	memplz, // {request memory page, page-id pushed to stack}
 	memcya, // (page-id) {free a memory page}
+	memcheck, // (page-id) {returns 1 if memory page is available}
 	memload, // [bool byte-mode], (page-id), (address), (length)
 	memstore, // [bool byte-mode], (page-id), (address), (length), ...(data)
 
