@@ -13,7 +13,7 @@
 	"scripts": {
 		"build": "tsc",
 		"start": "http-server x",
-		"test": "node x/sketch.js"
+		"test": "node x/phyto/vm.test.js"
 	},
 	"devDependencies": {
 		"http-server": "^14.1.1",

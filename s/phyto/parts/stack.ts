@@ -8,6 +8,10 @@ export class Stack {
 		return this.#array.length
 	}
 
+	copyArray() {
+		return [...this.#array]
+	}
+
 	#checkOverflow(n: number) {
 		if (this.size + n > this.max)
 			throw new Error(`stack overflow (max ${this.max})`)

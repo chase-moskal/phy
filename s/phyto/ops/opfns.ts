@@ -1,9 +1,9 @@
 
 import {Vm} from "../vm.js"
-import {Opname} from "./opname.js"
+import {Opcode} from "./opcode.js"
 import {terp} from "../utils/terp.js"
 
-export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
+export const opfns: Record<keyof typeof Opcode, (vm: Vm) => void> = {
 
 	//
 	// outside world stuff
@@ -23,7 +23,7 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	pushbytes: vm => {
-		const length = vm.bytecode.getInteger()
+		const length = vm.bytecode.getUint()
 		const bytes = vm.bytecode.getBytes(length)
 		vm.stack.pushN([...bytes])
 	},
@@ -58,7 +58,7 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	jump: vm => {
 		const isConditional = vm.bytecode.getBoolean()
-		const targetPosition = vm.bytecode.getInteger()
+		const targetPosition = vm.bytecode.getUint()
 		if (isConditional) {
 			const condition = vm.stack.pop()
 			if (condition)
@@ -123,27 +123,27 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	eq: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(terp.bool(a === b))
+		vm.stack.push(terp.bool(b === a))
 	},
 
 	lt: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(terp.bool(a < b))
+		vm.stack.push(terp.bool(b < a))
 	},
 
 	lte: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(terp.bool(a <= b))
+		vm.stack.push(terp.bool(b <= a))
 	},
 
 	gt: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(terp.bool(a > b))
+		vm.stack.push(terp.bool(b > a))
 	},
 
 	gte: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(terp.bool(a >= b))
+		vm.stack.push(terp.bool(b >= a))
 	},
 
 	//
@@ -220,7 +220,7 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	sub: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(a - b)
+		vm.stack.push(b - a)
 	},
 
 	mul: vm => {
@@ -230,12 +230,12 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	div: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(a / b)
+		vm.stack.push(b / a)
 	},
 
 	rem: vm => {
 		const [a, b] = vm.stack.popN(2)
-		vm.stack.push(a % b)
+		vm.stack.push(b % a)
 	},
 
 	neg: vm => {

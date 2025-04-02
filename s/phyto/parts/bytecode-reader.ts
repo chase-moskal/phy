@@ -11,18 +11,17 @@ export class BytecodeReader {
 
 	getOpcode() {
 		const opcode = this.bytes.at(this.position)
-		if (opcode !== undefined)
-			this.position += 1
+		this.position += 1
 		return opcode
 	}
 
 	getFloat() {
-		const value = this.view.getFloat64(this.position)
+		const value = this.view.getFloat64(this.position, true)
 		this.position += 8
 		return value
 	}
 
-	getInteger() {
+	getUint() {
 		const value = terp.uint(this.view.getFloat64(this.position, true))
 		this.position += 8
 		return value
