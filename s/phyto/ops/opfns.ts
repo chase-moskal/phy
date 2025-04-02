@@ -1,44 +1,7 @@
 
-import {Vm} from "../../phyto.js"
+import {Vm} from "../vm.js"
 import {Opname} from "./opname.js"
-
-function uint(f: number) {
-	if (!Number.isSafeInteger(f))
-		throw new Error("safe integer required")
-	if (f < 0)
-		throw new Error("positive integer required")
-	return f
-}
-
-function truthy(float: number) {
-	return !!float
-}
-
-function bool(bool: boolean) {
-	return bool ? 1 : 0
-}
-
-function getOperandFloat(vm: Vm) {
-	const value = vm.view.getFloat64(vm.position, true)
-	vm.position += 8
-	return value
-}
-
-function getOperandInteger(vm: Vm) {
-	const value = uint(vm.view.getFloat64(vm.position, true))
-	vm.position += 8
-	return value
-}
-
-function getOperandByte(vm: Vm) {
-	const value = vm.view.getUint8(vm.position)
-	vm.position += 1
-	return value
-}
-
-function getOperandBoolean(vm: Vm) {
-	return !!getOperandByte(vm)
-}
+import {terp} from "../utils/terp.js"
 
 export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
@@ -55,16 +18,14 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	//
 
 	push: vm => {
-		const value = getOperandFloat(vm)
+		const value = vm.bytecode.getFloat()
 		vm.stack.push(value)
 	},
 
 	pushbytes: vm => {
-		const length = getOperandInteger(vm)
-		for (const byte of vm.bytecode.slice(vm.position, vm.position + length)) {
-			vm.stack.push(byte)
-			vm.position += 1
-		}
+		const length = vm.bytecode.getInteger()
+		const bytes = vm.bytecode.getBytes(length)
+		vm.stack.pushN([...bytes])
 	},
 
 	pop: vm => {
@@ -72,10 +33,8 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	swap: vm => {
-		const a = vm.stack.pop()
-		const b = vm.stack.pop()
-		vm.stack.push(a)
-		vm.stack.push(b)
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.pushN([b, a])
 	},
 
 	dup: vm => {
@@ -83,33 +42,30 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	dup2: vm => {
-		const a = vm.stack.at(-2)
-		const b = vm.stack.at(-1)
-		vm.stack.push(a)
-		vm.stack.push(b)
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.pushN([a, b, a, b])
 	},
 
 	over: vm => {
-		vm.stack.push(vm.stack.at(-2))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.pushN([a, b, a])
 	},
 
 	select: vm => {
-		const cond = vm.stack.pop()
-		const a = vm.stack.pop()
-		const b = vm.stack.pop()
+		const [cond, a, b] = vm.stack.popN(3)
 		vm.stack.push(cond ? a : b)
 	},
 
 	jump: vm => {
-		const isConditional = getOperandBoolean(vm)
-		const targetPosition = getOperandInteger(vm)
+		const isConditional = vm.bytecode.getBoolean()
+		const targetPosition = vm.bytecode.getInteger()
 		if (isConditional) {
 			const condition = vm.stack.pop()
 			if (condition)
-				vm.position = targetPosition
+				vm.bytecode.position = targetPosition
 		}
 		else {
-			vm.position = targetPosition
+			vm.bytecode.position = targetPosition
 		}
 	},
 
@@ -123,15 +79,13 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	memcya: vm => {
-		const pageId = uint(vm.stack.pop())
-		vm.memory.membye(pageId)
+		const pageId = terp.uint(vm.stack.pop())
+		vm.memory.memcya(pageId)
 	},
 
 	memload: vm => {
-		const byteMode = getOperandBoolean(vm)
-		const pageId = uint(vm.stack.pop())
-		const address = uint(vm.stack.pop())
-		const length = uint(vm.stack.pop())
+		const byteMode = vm.bytecode.getBoolean()
+		const [pageId, address, length] = vm.stack.popN(3).map(terp.uint)
 		const page = vm.memory.getPage(pageId)
 		if (byteMode) {
 			for (const byte of page.bytes.slice(address, address + length).reverse())
@@ -149,10 +103,8 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	memstore: vm => {
-		const byteMode = getOperandBoolean(vm)
-		const pageId = uint(vm.stack.pop())
-		const address = uint(vm.stack.pop())
-		const length = uint(vm.stack.pop())
+		const byteMode = vm.bytecode.getBoolean()
+		const [pageId, address, length] = vm.stack.popN(3).map(terp.uint)
 		const page = vm.memory.getPage(pageId)
 		const numbers = vm.stack.popN(length)
 		if (byteMode) {
@@ -170,33 +122,28 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	//
 
 	eq: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
-		vm.stack.push(bool(a === b))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.push(terp.bool(a === b))
 	},
 
 	lt: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
-		vm.stack.push(bool(a < b))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.push(terp.bool(a < b))
 	},
 
 	lte: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
-		vm.stack.push(bool(a <= b))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.push(terp.bool(a <= b))
 	},
 
 	gt: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
-		vm.stack.push(bool(a > b))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.push(terp.bool(a > b))
 	},
 
 	gte: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
-		vm.stack.push(bool(a >= b))
+		const [a, b] = vm.stack.popN(2)
+		vm.stack.push(terp.bool(a >= b))
 	},
 
 	//
@@ -205,22 +152,22 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	nan: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(isNaN(a)))
+		vm.stack.push(terp.bool(isNaN(a)))
 	},
 
 	finite: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(Number.isFinite(a)))
+		vm.stack.push(terp.bool(Number.isFinite(a)))
 	},
 
 	positive: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(a >= 0))
+		vm.stack.push(terp.bool(a >= 0))
 	},
 
 	integer: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(Number.isSafeInteger(a)))
+		vm.stack.push(terp.bool(Number.isSafeInteger(a)))
 	},
 
 	//
@@ -229,17 +176,17 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 
 	not: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(!truthy(a)))
+		vm.stack.push(terp.bool(!terp.truthy(a)))
 	},
 
 	truthy: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(truthy(a)))
+		vm.stack.push(terp.bool(terp.truthy(a)))
 	},
 
 	falsy: vm => {
 		const a = vm.stack.pop()
-		vm.stack.push(bool(!truthy(a)))
+		vm.stack.push(terp.bool(!terp.truthy(a)))
 	},
 
 	//
@@ -257,44 +204,37 @@ export const opfns: Record<keyof typeof Opname, (vm: Vm) => void> = {
 	},
 
 	min: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(Math.min(a, b))
 	},
 
 	max: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(Math.max(a, b))
 	},
 
 	add: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(a + b)
 	},
 
 	sub: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(a - b)
 	},
 
 	mul: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(a * b)
 	},
 
 	div: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(a / b)
 	},
 
 	rem: vm => {
-		const b = vm.stack.pop()
-		const a = vm.stack.pop()
+		const [a, b] = vm.stack.popN(2)
 		vm.stack.push(a % b)
 	},
 

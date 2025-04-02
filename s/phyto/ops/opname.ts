@@ -1,4 +1,6 @@
 
+export type Opkey = keyof typeof Opname
+
 // [typed operand] (f64 popped from stack) {description}
 export enum Opname {
 
