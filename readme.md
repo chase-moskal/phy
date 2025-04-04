@@ -30,7 +30,8 @@ log counter.get // 1
 
 # 🦠 Phyto — virtual machine
 - stack-based virtual machine and bytecode isa
-- ieee 754 float64 is the *only* type — all ops operate on floats
+- only one type — the god-tier type — ieee 754 float64
+- all opcodes operate on floats!
 - opcodes are comfy, leaning on host for perf
 - `memplz` op requests a 64 kb memory page
 - `memcya` op frees a memory page
