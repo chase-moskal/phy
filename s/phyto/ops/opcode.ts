@@ -20,8 +20,8 @@ export enum Opcode {
 	memplz, // {request memory page, page-id pushed to stack}
 	memcya, // (page-id) {free a memory page}
 	memcheck, // (page-id) {returns 1 if memory page is available}
-	memload, // [bool byte-mode], (page-id), (address), (length)
-	memstore, // [bool byte-mode], (page-id), (address), (length), ...(data)
+	memload, // [byte type], (page-id), (address), (elements)
+	memstore, // [byte type], (page-id), (address), (elements), ...(data)
 
 	// comparison stuff
 	eq, lt, gt, lte, gte,
